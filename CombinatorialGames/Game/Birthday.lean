@@ -236,7 +236,7 @@ theorem birthday_miny (x : IGame) : (⧿x).birthday = x.birthday + 2 := by
   rw [← neg_tiny, birthday_neg, birthday_tiny]
 
 /-- Games with a bounded birthday form a small set. -/
-instance small_setOf_birthday_le (o : NatOrdinal.{u}) : Small.{u} {x // birthday x ≤ o} := by
+instance small_setOf_birthday_le (o : NatOrdinal.{u}) : Small.{u} {x | birthday x ≤ o} := by
   have (y : Iio o) := have := y.2; small_setOf_birthday_le y.1
   have : Small.{u} {x // birthday x < o} := by
     convert @small_iUnion _ _ _ _ fun y : Iio o ↦ have := y.2; small_setOf_birthday_le y.1
@@ -257,7 +257,7 @@ instance small_setOf_birthday_le (o : NatOrdinal.{u}) : Small.{u} {x // birthday
 termination_by o
 
 /-- Games with a bounded birthday form a small set. -/
-instance small_setOf_birthday_lt (o : NatOrdinal.{u}) : Small.{u} {x // birthday x < o} := by
+instance small_setOf_birthday_lt (o : NatOrdinal.{u}) : Small.{u} {x | birthday x < o} := by
   apply @small_subset _ _ _ _ (small_setOf_birthday_le o)
   exact fun x (hx : x.birthday < _) ↦ le_of_lt hx
 
