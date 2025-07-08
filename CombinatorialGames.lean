@@ -18,9 +18,10 @@ import CombinatorialGames.Nimber.Basic
 import CombinatorialGames.Nimber.Field
 import CombinatorialGames.Register
 import CombinatorialGames.Surreal.Basic
+import CombinatorialGames.Surreal.Birthday
 import CombinatorialGames.Surreal.Division
+import CombinatorialGames.Surreal.Dyadic
 import CombinatorialGames.Surreal.Multiplication
-import CombinatorialGames.Surreal.Numeric
 import CombinatorialGames.Surreal.Ordinal
 import CombinatorialGames.Surreal.Real
 import CombinatorialGames.Surreal.Sign
