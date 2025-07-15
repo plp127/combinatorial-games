@@ -23,6 +23,7 @@ import CombinatorialGames.SignExpansion.Basic
 import CombinatorialGames.SignExpansion.Small
 import CombinatorialGames.SignExpansion.Surreal
 import CombinatorialGames.Surreal.Basic
+import CombinatorialGames.Surreal.Birthday
 import CombinatorialGames.Surreal.Cut
 import CombinatorialGames.Surreal.Division
 import CombinatorialGames.Surreal.Dyadic
