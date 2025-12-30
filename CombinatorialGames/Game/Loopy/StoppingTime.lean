@@ -156,4 +156,51 @@ theorem stoppingTime_coinduction (p : Player)
   · cases Player.neg_eq.2 hq
     exact fun x ↦ (hnp x).trans (iSup₂_mono fun y _ ↦ add_left_mono (up y))
 
+theorem stoppingTime_unique (p : Player)
+    (val : Player → LGame.{u} → WithTop NatOrdinal.{u})
+    (hp : ∀ x, val p x = ⨅ y ∈ x.moves p, val (-p) y)
+    (hnp : ∀ x, val (-p) x = ⨆ y ∈ x.moves (-p), val p y + 1) :
+    val = stoppingTime p :=
+  le_antisymm
+    (stoppingTime_coinduction p val (fun x => (hp x).le) (fun x => (hnp x).le))
+    (stoppingTime_induction p val (fun x => (hp x).ge) (fun x => (hnp x).ge))
+
+theorem stoppingTime_le_stoppingTime_of_mem_moves_of_eq {p q : Player} {x y : LGame}
+    (h : y ∈ x.moves q) (hpq : p = q) : stoppingTime p q x ≤ stoppingTime p (-q) y := by
+  rw [stoppingTime_of_eq hpq]
+  exact biInf_le (stoppingTime p (-q)) h
+
+theorem stoppingTime_le_stoppingTime_of_mem_moves_of_ne {p q : Player} {x y : LGame}
+    (h : y ∈ x.moves q) (hpq : p ≠ q) : stoppingTime p (-q) y ≤ stoppingTime p q x := by
+  rw [stoppingTime_of_ne hpq]
+  exact le_trans (Order.le_add_one _) (le_biSup (fun y => stoppingTime p (-q) y + 1) h)
+
+theorem stoppingTime_lt_stoppingTime_of_mem_moves' {p q : Player} {x y : LGame}
+    (h : y ∈ x.moves q) (hpq : p ≠ q) (hy : stoppingTime p (-q) y ≠ ⊤) :
+    stoppingTime p (-q) y < stoppingTime p q x := by
+  rw [ne_eq, ← isMax_iff_eq_top] at hy
+  rw [stoppingTime_of_ne hpq]
+  apply lt_of_lt_of_le ((Order.lt_add_one_iff_not_isMax _).2 hy)
+  exact le_biSup (fun y => stoppingTime p (-q) y + 1) h
+
+theorem stoppingTime_lt_stoppingTime_of_mem_moves {p q : Player} {x y : LGame}
+    (h : y ∈ x.moves q) (hpq : p ≠ q) (hx : stoppingTime p q x ≠ ⊤) :
+    stoppingTime p (-q) y < stoppingTime p q x := by
+  apply stoppingTime_lt_stoppingTime_of_mem_moves' h hpq
+  rw [ne_eq, ← isMax_iff_eq_top] at hx ⊢
+  exact fun hy => hx (hy.mono (stoppingTime_le_stoppingTime_of_mem_moves_of_ne h hpq))
+
+theorem stoppingTime_eq_top_of_mem_moves_of_eq {p q : Player} {x y : LGame}
+    (h : y ∈ x.moves q) (hpq : p = q) (hx : stoppingTime p q x = ⊤) :
+    stoppingTime p (-q) y = ⊤ := by
+  rw [← top_le_iff] at hx ⊢
+  exact le_trans hx (stoppingTime_le_stoppingTime_of_mem_moves_of_eq h hpq)
+
+theorem exists_stoppingTime_eq_top_of_ne {p q : Player} {x : LGame}
+    (hpq : p ≠ q) (hx : stoppingTime p q x = ⊤) :
+    ∃ y ∈ x.moves q, stoppingTime p (-q) y = ⊤ := by
+  rw [stoppingTime_of_ne hpq] at hx
+  contrapose! hx
+  sorry
+
 end LGame
