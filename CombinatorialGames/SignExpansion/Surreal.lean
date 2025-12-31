@@ -59,11 +59,7 @@ theorem truncate_of_birthday_le {o : NatOrdinal.{u}} {x : Surreal.{u}}
   rw [ht, Surreal.mk_eq_mk]
   symm
   apply Fits.equiv_of_forall_birthday_le
-  · constructor <;>
-      · intro z hz
-        rw [moves_ofSets] at hz
-        obtain ⟨-, _, hz⟩ := hz
-        simpa using hz
+  · constructor <;> simp +contextual
   · intro z nz hz
     apply le_of_not_gt
     intro hbb
