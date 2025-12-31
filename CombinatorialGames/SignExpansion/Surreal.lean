@@ -41,8 +41,17 @@ private local instance truncIGameNumeric (o : NatOrdinal.{u}) (x : Surreal.{u}) 
     rw [rightMoves_ofSets] at hy
     exact hy.2.1
 
-def truncate (o : NatOrdinal.{u}) (x : Surreal.{u}) : Surreal.{u} :=
-  mk (x.truncIGame o)
+def truncate (o : NatOrdinal.{u}) : Surreal.{u} →o Surreal.{u} where
+  toFun x := mk (x.truncIGame o)
+  monotone' := by
+    intro x y hxy
+    simp_rw [Surreal.mk_le_mk, truncIGame]
+    rw [le_iff_forall_lf]
+    refine ⟨fun z hz => left_lf ?_, fun z hz => lf_right ?_⟩
+    · rw [leftMoves_ofSets] at hz ⊢
+      exact ⟨hz.1, hz.2.1, lt_of_lt_of_le hz.2.2 hxy⟩
+    · rw [rightMoves_ofSets] at hz ⊢
+      exact ⟨hz.1, hz.2.1, lt_of_le_of_lt hxy hz.2.2⟩
 
 theorem birthday_truncate_le (o : NatOrdinal.{u}) (x : Surreal.{u}) :
     (truncate o x).birthday ≤ o := by
@@ -59,7 +68,7 @@ theorem truncate_of_birthday_le {o : NatOrdinal.{u}} {x : Surreal.{u}}
     (h : x.birthday ≤ o) : x.truncate o = x := by
   obtain ⟨k, nk, rfl, hk⟩ := x.birthday_eq_iGameBirthday
   rw [← hk] at h
-  rw [truncate, Surreal.mk_eq_mk]
+  rw [truncate, OrderHom.coe_mk, Surreal.mk_eq_mk]
   symm
   apply Fits.equiv_of_forall_birthday_le
   · constructor
@@ -93,16 +102,6 @@ theorem truncate_eq_iff {x : Surreal.{u}} {o : NatOrdinal.{u}} :
   refine le_of_not_gt fun ho => ?_
   refine ne_of_lt ?_ (congrArg birthday h)
   exact (x.birthday_truncate_le o).trans_lt ho
-
-theorem monotone_truncate {o : NatOrdinal.{u}} : Monotone (truncate o) := by
-  intro x y hxy
-  simp_rw [truncate, Surreal.mk_le_mk, truncIGame]
-  rw [le_iff_forall_lf]
-  refine ⟨fun z hz => left_lf ?_, fun z hz => lf_right ?_⟩
-  · rw [leftMoves_ofSets] at hz ⊢
-    exact ⟨hz.1, hz.2.1, lt_of_lt_of_le hz.2.2 hxy⟩
-  · rw [rightMoves_ofSets] at hz ⊢
-    exact ⟨hz.1, hz.2.1, lt_of_le_of_lt hxy hz.2.2⟩
 
 def ofSurreal (x : Surreal.{u}) : SignExpansion where
   sign i := .sign (x - x.truncate i)
