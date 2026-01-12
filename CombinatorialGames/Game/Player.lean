@@ -109,6 +109,118 @@ instance : CommGroup Player where
 @[simp, grind =] lemma one_eq_left : 1 = left := rfl
 @[simp, grind =] lemma inv_eq_self (p : Player) : p⁻¹ = p := rfl
 
+section LE
+variable {α : Type*} [LE α] (p : Player) (a b : α)
+
+@[to_dual self (reorder := a b)] def le : Prop := p.casesOn (a ≤ b) (b ≤ a)
+@[simp, to_dual self] theorem left_le_eq : left.le a b = (a ≤ b) := rfl
+@[simp, to_dual self] theorem right_le_eq : right.le a b = (b ≤ a) := rfl
+@[simp, to_dual self] theorem neg_le : (-p).le a b = p.le b a := p.casesOn rfl rfl
+
+end LE
+
+section LT
+variable {α : Type*} [LT α] (p : Player) (a b : α)
+
+@[to_dual self (reorder := a b)] def lt : Prop := p.casesOn (a < b) (b < a)
+@[simp, to_dual self] theorem left_lt_eq : left.lt a b = (a < b) := rfl
+@[simp, to_dual self] theorem right_lt_eq : right.lt a b = (b < a) := rfl
+@[simp, to_dual self] theorem neg_lt : (-p).lt a b = p.lt b a := p.casesOn rfl rfl
+
+end LT
+
+section Preorder
+
+variable {α : Type*} [Preorder α] {p : Player} {a b c : α}
+
+@[simp] lemma le_refl : ∀ a : α, p.le a a := p.casesOn _root_.le_refl _root_.le_refl
+
+lemma le_rfl : p.le a a := le_refl a
+
+@[to_dual ge_trans] lemma le_trans : p.le a b → p.le b c → p.le a c :=
+  p.casesOn _root_.le_trans _root_.ge_trans
+
+@[to_dual self]
+lemma lt_iff_le_not_ge : p.lt a b ↔ p.le a b ∧ ¬p.le b a :=
+  p.casesOn _root_.lt_iff_le_not_ge _root_.lt_iff_le_not_ge
+
+@[to_dual self]
+lemma lt_of_le_not_ge (hab : p.le a b) (hba : ¬p.le b a) : p.lt a b := lt_iff_le_not_ge.2 ⟨hab, hba⟩
+
+@[to_dual ge_of_eq]
+lemma le_of_eq (hab : a = b) : p.le a b := hab ▸ le_rfl
+@[to_dual self] lemma le_of_lt (hab : p.lt a b) : p.le a b := (lt_iff_le_not_ge.1 hab).1
+@[to_dual self] lemma not_le_of_gt (hab : p.lt a b) : ¬p.le b a := (lt_iff_le_not_ge.1 hab).2
+@[to_dual self] lemma not_lt_of_ge (hab : p.le a b) : ¬p.lt b a := imp_not_comm.1 not_le_of_gt hab
+
+@[to_dual self] alias lt.not_ge := not_le_of_gt
+@[to_dual self] alias le.not_gt := not_lt_of_ge
+
+@[to_dual self] lemma lt_irrefl (a : α) : ¬p.lt a a := fun h ↦ not_le_of_gt h le_rfl
+
+@[to_dual lt_of_lt_of_le']
+lemma lt_of_lt_of_le (hab : p.lt a b) (hbc : p.le b c) : p.lt a c :=
+  lt_of_le_not_ge (le_trans (le_of_lt hab) hbc) fun hca ↦ not_le_of_gt hab (le_trans hbc hca)
+
+@[to_dual lt_of_le_of_lt']
+lemma lt_of_le_of_lt (hab : p.le a b) (hbc : p.lt b c) : p.lt a c :=
+  lt_of_le_not_ge (le_trans hab (le_of_lt hbc)) fun hca ↦ not_le_of_gt hbc (le_trans hca hab)
+
+@[to_dual gt_trans]
+lemma lt_trans : p.lt a b → p.lt b c → p.lt a c := fun h₁ h₂ => lt_of_lt_of_le h₁ (le_of_lt h₂)
+
+@[to_dual ne_of_gt]
+lemma ne_of_lt (h : p.lt a b) : a ≠ b := fun he => absurd h (he ▸ lt_irrefl a)
+@[to_dual self]
+lemma lt_asymm (h : p.lt a b) : ¬p.lt b a := fun h1 : p.lt b a => lt_irrefl a (lt_trans h h1)
+
+@[to_dual self] alias not_lt_of_gt := lt_asymm
+
+@[to_dual le_of_lt_or_eq']
+lemma le_of_lt_or_eq (h : p.lt a b ∨ a = b) : p.le a b := h.elim le_of_lt le_of_eq
+@[to_dual le_of_eq_or_lt']
+lemma le_of_eq_or_lt (h : a = b ∨ p.lt a b) : p.le a b := h.elim le_of_eq le_of_lt
+
+instance instTransLE : @Trans α α α p.le p.le p.le := ⟨le_trans⟩
+instance instTransLT : @Trans α α α p.lt p.lt p.lt := ⟨lt_trans⟩
+instance instTransLTLE : @Trans α α α p.lt p.le p.lt := ⟨lt_of_lt_of_le⟩
+instance instTransLELT : @Trans α α α p.le p.lt p.lt := ⟨lt_of_le_of_lt⟩
+-- we have to express the following 4 instances in terms of `≥` instead of flipping the arguments
+-- to `≤`, because otherwise `calc` gets confused.
+@[to_dual existing instTransLE]
+instance instTransGE : @Trans α α α (fun a b => p.le b a) (fun a b => p.le b a)
+    (fun a b => p.le b a) := ⟨ge_trans⟩
+@[to_dual existing instTransLT]
+instance instTransGT : @Trans α α α (fun a b => p.lt b a) (fun a b => p.lt b a)
+    (fun a b => p.lt b a) := ⟨gt_trans⟩
+@[to_dual existing instTransLTLE]
+instance instTransGTGE : @Trans α α α (fun a b => p.lt b a) (fun a b => p.le b a)
+    (fun a b => p.lt b a) := ⟨lt_of_lt_of_le'⟩
+@[to_dual existing instTransLELT]
+instance instTransGEGT : @Trans α α α (fun a b => p.le b a) (fun a b => p.lt b a)
+    (fun a b => p.lt b a) := ⟨lt_of_le_of_lt'⟩
+
+end Preorder
+
+section PartialOrder
+variable {α : Type*} [PartialOrder α] {p : Player} {a b c : α}
+
+@[to_dual ge_antisymm]
+lemma le_antisymm : p.le a b → p.le b a → a = b := p.casesOn _root_.le_antisymm _root_.ge_antisymm
+
+@[to_dual eq_of_ge_of_le]
+alias eq_of_le_of_ge := le_antisymm
+
+@[to_dual ge_antisymm_iff]
+lemma le_antisymm_iff : a = b ↔ p.le a b ∧ p.le b a :=
+  ⟨fun e => ⟨le_of_eq e, le_of_eq e.symm⟩, fun ⟨h1, h2⟩ => le_antisymm h1 h2⟩
+
+@[to_dual lt_of_le_of_ne']
+lemma lt_of_le_of_ne : p.le a b → a ≠ b → p.lt a b := fun h₁ h₂ =>
+  lt_of_le_not_ge h₁ <| mt (le_antisymm h₁) h₂
+
+end PartialOrder
+
 end Player
 
 open Player
