@@ -11,14 +11,14 @@ namespace Surreal.Multiplication
 open IGame
 
 def Rel2 (a b : IGame × IGame) : Prop :=
-  ((a.1 = b.1 ∨ Subposition a.1 b.1) ∨ (a.1 = b.2 ∨ Subposition a.1 b.2)) ∧
+  (WSubposition a.1 b.1 ∨ WSubposition a.1 b.2) ∧
   (Subposition a.2 b.1 ∨ Subposition a.2 b.2) ∨
   (Subposition a.1 b.1 ∨ Subposition a.1 b.2) ∧
-  ((a.2 = b.1 ∨ Subposition a.2 b.1) ∨ (a.2 = b.2 ∨ Subposition a.2 b.2))
+  (WSubposition a.2 b.1 ∨ WSubposition a.2 b.2)
 
 def WRel2 (a b : IGame × IGame) : Prop :=
-  ((a.1 = b.1 ∨ Subposition a.1 b.1) ∨ (a.1 = b.2 ∨ Subposition a.1 b.2)) ∧
-  ((a.2 = b.1 ∨ Subposition a.2 b.1) ∨ (a.2 = b.2 ∨ Subposition a.2 b.2))
+  (WSubposition a.1 b.1 ∨ WSubposition a.1 b.2) ∧
+  (WSubposition a.2 b.1 ∨ WSubposition a.2 b.2)
 
 theorem rel2_wf : WellFounded Rel2 := by
   sorry
