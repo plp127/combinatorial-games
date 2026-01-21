@@ -33,8 +33,8 @@ universe u
 namespace Surreal
 open Set IGame
 
-/-- A surreal cut consists of two complementary sets of surreals, where every surreal in the former
-is less than every surreal in the latter. -/
+/-- A surreal cut, sometimes called a section, consists of two complementary sets of surreals,
+where every surreal in the former is less than every surreal in the latter. -/
 abbrev Cut := Concept Surreal Surreal (· < ·)
 
 namespace Cut
@@ -46,10 +46,12 @@ def left (x : Cut) := x.extent
 /-- The right set in a cut. This is an alias for `Concept.intent`. -/
 def right (x : Cut) := x.intent
 
-alias left_lt_right := Concept.rel_extent_intent
-alias disjoint_left_right := Concept.disjoint_extent_intent
-alias codisjoint_left_right := Concept.codisjoint_extent_intent
-alias isCompl_left_right := Concept.isCompl_extent_intent
+theorem left_lt_right {x : Cut} {y z : Surreal} (hy : y ∈ x.left) (hz : z ∈ x.right) : y < z :=
+  x.rel_extent_intent hy hz
+
+theorem disjoint_left_right (x : Cut) : Disjoint x.left x.right := x.disjoint_extent_intent
+theorem codisjoint_left_right (x : Cut) : Codisjoint x.left x.right := x.codisjoint_extent_intent
+theorem isCompl_left_right (x : Cut) : IsCompl x.left x.right := x.isCompl_extent_intent
 
 theorem isLowerSet_left (c : Cut) : IsLowerSet c.left := by
   intro a b hb ha
@@ -184,7 +186,7 @@ protected theorem lt_neg {x y : Cut} : x < -y ↔ y < -x := by
 
 /-! ### Cuts from games -/
 
-/-- The left cut of a game `x` is such that its right set consists of surreals
+/-- The left stop $L(x)$ of a game `x` is such that its right set consists of surreals
 equal or larger to it. -/
 def leftGame : Game →o Cut where
   toFun x := {
@@ -200,7 +202,7 @@ def leftGame : Game →o Cut where
   }
   monotone' x y hy z hz := mt hy.trans hz
 
-/-- The right cut of a game `x` is such that its right set consists of surreals
+/-- The right stop $R(x)$ of a game `x` is such that its left set consists of surreals
 equal or lesser to it. -/
 def rightGame : Game →o Cut where
   toFun x := {
@@ -390,7 +392,7 @@ theorem leftSurreal_mem_of_sSup_eq {s : Set Cut.{u}} {x : Surreal} [Small.{u} s]
 
 /-! ### Calculating cuts -/
 
-/-- The supremum of all right cuts of left options of `x`.
+/-- The supremum $L'(x)$ of all right cuts of left options of `x`.
 
 If `infRight x ≤ supLeft x` then `leftGame x = supLeft x` and `rightGame x = infRight x`; otherwise,
 `x` is equivalent to the simplest surreal between `supLeft x` and `infRight x`. -/
@@ -405,7 +407,7 @@ theorem right_supLeft (x : IGame) :
     (supLeft x).right = ⋂ i ∈ xᴸ, {y | .mk i ⧏ y.toGame} := by
   simp [supLeft]
 
-/-- The infimum of all left cuts of right options of `x`.
+/-- The infimum $R'(x)$ of all left cuts of right options of `x`.
 
 If `infRight x ≤ supLeft x` then `leftGame x = supLeft x` and `rightGame x = infRight x`; otherwise,
 `x` is equivalent to the simplest surreal between `supLeft x` and `infRight x`. -/
