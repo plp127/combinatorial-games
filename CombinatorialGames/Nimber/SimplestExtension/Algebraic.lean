@@ -6,7 +6,8 @@ Authors: Violeta Hernández Palacios
 import CombinatorialGames.Nimber.SimplestExtension.Closure
 import CombinatorialGames.Nimber.SimplestExtension.Polynomial
 import Mathlib.Algebra.Group.Pointwise.Set.Small
-import Mathlib.FieldTheory.IsAlgClosed.Basic
+import Mathlib.Data.DFinsupp.Small
+import Mathlib.FieldTheory.AlgebraicClosure
 
 /-!
 # Nimbers are algebraically closed
@@ -16,7 +17,7 @@ This file proves the last part of the simplest extension theorem (see
 are algebraically closed.
 -/
 
-universe u
+universe u v
 
 open Order Ordinal Polynomial Set
 
@@ -31,6 +32,12 @@ theorem Ordinal.one_lt_opow {x y : Ordinal} (h : 1 < x) : 1 < x ^ y ↔ y ≠ 0 
 @[simp]
 theorem Ordinal.one_lt_pow {x : Ordinal} {n : ℕ} (h : 1 < x) : 1 < x ^ n ↔ n ≠ 0 :=
   mod_cast one_lt_opow (y := n) h
+
+instance AddMonoidAlgebra.small {σ R : Type*} [Semiring R] [Small.{u} R] [Small.{u} σ] :
+    Small.{u} (AddMonoidAlgebra R σ) := Finsupp.small
+
+instance Polynomial.small {R : Type u} [Semiring R] [Small.{v} R] : Small.{v} (Polynomial R) :=
+  small_map ⟨Polynomial.toFinsupp, Polynomial.ofFinsupp, Eq.refl, Eq.refl⟩
 
 namespace Finsupp
 
@@ -505,27 +512,58 @@ private instance (x : Nimber.{u}) : Small.{u} {p : Nimber[X] // ∀ k, p.coeff k
   ext k
   simpa using congrFun h k
 
-/-- The set of roots of polynomials with coefficients less than `x`. -/
-private def rootSet (x : Nimber) : Set Nimber :=
-  ⋃ p : {p : Nimber[X] // ∀ k, p.coeff k < x}, p.1.roots.toFinset
-
-private instance (x : Nimber.{u}) : Small.{u} x.rootSet :=
-  small_iUnion _
+private theorem algebraicClosure_ne_top (x : Nimber) :
+    algebraicClosure (IsField.fieldClosure x).toSubfield Nimber ≠ ⊤ := by
+    intro h
+    set field := (IsField.fieldClosure x).toSubfield
+    rw [← SetLike.coe_injective.eq_iff, IntermediateField.coe_top, Set.eq_univ_iff_forall] at h
+    replace h y : y ∈ ⋃ p : field[X], p.rootSet Nimber := by
+      specialize h y
+      rw [SetLike.mem_coe, mem_algebraicClosure_iff, IsAlgebraic] at h
+      simpa [mem_rootSet] using h
+    apply mt small_univ_iff.1 not_small_nimber
+    rw [← Set.eq_univ_iff_forall.2 h]
+    have : Small field := inferInstanceAs (Small (Iio _))
+    have (p : field[X]) := (rootSet_finite p Nimber).to_subtype
+    infer_instance
 
 /-- Returns the smallest `IsAlgClosed` that's at least `x`. -/
 noncomputable def algClosure (x : Nimber) : Nimber :=
-  ⨆ n : ℕ, (fun y ↦ fieldClosure (sSup <| (succ '' rootSet y)))^[n] x.fieldClosure
+  sInf (algebraicClosure (IsField.fieldClosure x).toSubfield Nimber)ᶜ
 
+private protected theorem IsField.algClosure (x : Nimber) : IsField (algClosure x) :=
+  isField_sInf_compl _ fun h => algebraicClosure_ne_top x (IntermediateField.toSubfield_injective h)
+
+theorem isAlgClosed_sInf_compl {s : Subfield Nimber} (hs : _root_.IsAlgClosed s) (hs' : s ≠ ⊤) :
+    IsAlgClosed (sInf sᶜ) := by
+  have hsb : s ≠ ⊥ := by
+    sorry
+  have hsn : (s : Set Nimber)ᶜ.Nonempty := by contrapose! hs'; simpa using hs'
+  have hI := csInf_mem hsn
+  contrapose hI
+  rw [isAlgClosed_iff_leastNoRoots_eq_top (isField_sInf_compl s (by simpa)).toIsRing] at hI
+  simp only [mem_compl_iff, SetLike.mem_coe, not_not]
+  have := notMem_of_lt_csInf' <|
+    (isRing_sInf_compl s.toSubring (by simpa)).inv_lt_self_of_not_isField hI
+  simpa
+
+private theorem isLowerSet_algClosure (x : Nimber) :
+    IsLowerSet <| SetLike.coe <| algebraicClosure (IsField.fieldClosure x).toSubfield Nimber := by
+  intro a b h ha
+  by_contra hb
+  have hx := isField_sInf_compl _ fun h =>
+    algebraicClosure_ne_top x (IntermediateField.toSubfield_injective h)
+  stop
+  apply notMem_of_lt_csInf' (h.trans_lt (hx.toSubfield.closure_le.2 _ ha)) hb
+  intro y hy
+  rw [SetLike.mem_coe, mem_toSubfield_iff]
+  by_contra! hy'
+  exact csInf_mem (s := _ᶜ) ⟨b, hb⟩ (mem_closure_of_mem (hs hy' hy))
+
+#exit
 @[simp]
 theorem le_algClosure (x : Nimber) : x ≤ algClosure x :=
-  le_ciSup_of_le (bddAbove_of_small _) 0 (by simp)
-
-private protected theorem IsField.algClosure (x : Nimber) : IsField (algClosure x) := by
-  refine IsField.iSup fun n ↦ ?_
-  cases n
-  · simp
-  · rw [Function.iterate_succ_apply']
-    simp
+  le_ciInf_of_le (bddAbove_of_small _) 0 (by simp)
 
 private theorem algClosure.root_lt {x r : Nimber} {p : Nimber[X]} (hp₀ : p ≠ 0)
     (hpk : ∀ k, p.coeff k < algClosure x) (hr : p.IsRoot r) : r < algClosure x := by
