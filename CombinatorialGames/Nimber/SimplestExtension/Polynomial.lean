@@ -227,6 +227,13 @@ theorem IsField.eval_embed {x : Nimber} (h : IsField x) {p : Nimber[X]}
     (hp : ∀ k, p.coeff k < x) (y) : (h.embed p hp).eval y = ⟨_, h.eval_lt hp y.2⟩ := by
   simp [← Subtype.val_inj, embed, sum, eval_eq_sum]
 
+-- TODO: generalize to `Subring`
+theorem forall_coeff_mul_lt {x : Nimber} (h : IsRing x) {p q : Nimber[X]}
+    (hp : ∀ k, p.coeff k < x) (hq : ∀ k, q.coeff k < x) : ∀ k, (p * q).coeff k < x := by
+  intro k
+  rw [coeff_mul]
+  exact h.sum_lt fun _ _ ↦ h.mul_lt (hp _) (hq _)
+
 /-! ### Lexicographic ordering on polynomials -/
 
 namespace Lex
@@ -494,6 +501,8 @@ theorem succ_eq_add_one_of_coeff_zero {p : Nimber[X]} (h : p.coeff 0 = 0) : succ
 
 end Lex
 
+open Ordinal
+
 /-- Evaluate a nimber polynomial using ordinal arithmetic.
 
 TODO: once the `Ordinal.CNF` API is more developed, use it to redefine this. -/
@@ -617,6 +626,14 @@ theorem oeval_lt_opow_iff {x : Nimber} {p : Nimber[X]} {n : ℕ}
     simpa using H'
   mpr := oeval_lt_opow hpk
 
+theorem oeval_lt_opow_omega0 {x : Nimber} {p : Nimber[X]}
+    (hpk : ∀ k, p.coeff k < x) : oeval x p < ∗(x.val ^ ω) := by
+  apply (oeval_lt_opow hpk (n := p.natDegree + 1) _).trans_le
+  · rw [of.le_iff_le, ← opow_natCast]
+    apply opow_le_opow_right (hpk 0).bot_lt
+    simp [nat_lt_omega0]
+  · simpa using degree_le_natDegree
+
 theorem oeval_lt_oeval {x : Nimber} {p q : Nimber[X]} (h : p < q)
     (hpk : ∀ k, p.coeff k < x) (hqk : ∀ k, q.coeff k < x) : oeval x p < oeval x q := by
   rw [Nimber.Lex.lt_def] at h
@@ -709,6 +726,10 @@ theorem oeval_le_oeval_iff {x : Nimber} {p q : Nimber[X]}
     (hpk : ∀ k, p.coeff k < x) (hqk : ∀ k, q.coeff k < x) : oeval x p ≤ oeval x q ↔ p ≤ q :=
   le_iff_le_iff_lt_iff_lt.2 (oeval_lt_oeval_iff hqk hpk)
 
+theorem oeval_eq_oeval_iff {x : Nimber} {p q : Nimber[X]}
+    (hpk : ∀ k, p.coeff k < x) (hqk : ∀ k, q.coeff k < x) : oeval x p = oeval x q ↔ p = q := by
+  simp_rw [le_antisymm_iff, oeval_le_oeval_iff hpk hqk, oeval_le_oeval_iff hqk hpk]
+
 /-- A version of `eq_oeval_of_lt_opow` stated in terms of `Ordinal`. -/
 theorem eq_oeval_of_lt_opow' {x y : Ordinal} {n : ℕ} (hx₀ : x ≠ 0) (h : y < x ^ n) :
     ∃ p : Nimber[X], p.degree < n ∧ (∀ k, val (p.coeff k) < x) ∧ oeval (∗x) p = y := by
@@ -731,6 +752,15 @@ theorem eq_oeval_of_lt_opow' {x y : Ordinal} {n : ℕ} (hx₀ : x ≠ 0) (h : y 
 theorem eq_oeval_of_lt_opow {x y : Nimber} {n : ℕ} (hx₀ : x ≠ 0) (h : y < of (x.val ^ n)) :
     ∃ p : Nimber[X], p.degree < n ∧ (∀ k, p.coeff k < x) ∧ oeval x p = y :=
   eq_oeval_of_lt_opow' hx₀ h
+
+theorem eq_oeval_of_lt_opow_omega0 {x y : Nimber} (h : y < of (x.val ^ ω)) :
+    ∃ p : Nimber[X], (∀ k, p.coeff k < x) ∧ oeval x p = y := by
+  have hx₀ : x ≠ 0 := by rintro rfl; simp at h
+  obtain ⟨c, hc, h : y < of (val x ^ c)⟩ := (lt_opow_of_isSuccLimit hx₀ isSuccLimit_omega0).1 h
+  obtain ⟨n, rfl⟩ := lt_omega0.1 hc
+  rw [opow_natCast] at h
+  obtain ⟨p, -, hp, rfl⟩ := eq_oeval_of_lt_opow hx₀ h
+  exact ⟨p, hp, rfl⟩
 
 theorem eq_oeval_of_lt_oeval {x y : Nimber} {p : Nimber[X]} (hx₀ : x ≠ 0)
     (hpk : ∀ k, p.coeff k < x) (h : y < oeval x p) :
