@@ -359,6 +359,11 @@ theorem IsAlgClosed.eval_eq_of_lt {x : Nimber} (h : IsAlgClosed x)
     {p : Nimber[X]} (hpk : ∀ k, p.coeff k < x) : p.eval x = oeval x p :=
   (h.toIsNthDegreeClosed _).eval_eq_of_lt degree_le_natDegree hpk
 
+theorem IsAlgClosed.pow_eq {n : ℕ} {x : Nimber} (h : IsAlgClosed x) :
+    x ^ n = ∗(x.val ^ n) := by
+  have hp (k : Nat) : (X ^ n).coeff k < x := by simp [apply_ite, ite_apply, h.zero_lt, h.one_lt]
+  simpa using h.eval_eq_of_lt hp
+
 attribute [simp] eval_prod eval_multiset_prod leadingCoeff_prod in
 private theorem IsField.isRoot_leastNoRoots {x : Nimber} (h : IsField x) (ht) :
     (x.leastNoRoots.untop ht).IsRoot x := by

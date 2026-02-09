@@ -7,6 +7,26 @@ import CombinatorialGames.Nimber.SimplestExtension.Algebraic
 
 universe u
 
+theorem Ordinal.opow_eq_one_iff {a b : Ordinal} : a ^ b = 1 ↔ a = 1 ∨ b = 0 := by
+  refine ⟨fun h => ?_, by simp +contextual [or_imp]⟩
+  contrapose! h
+  by_cases ha : a = 0
+  · simp [ha, h.2]
+  apply ne_of_gt
+  have h1a : 1 < a := lt_of_not_ge (by simp [le_one_iff, ha, h.1])
+  rw [← opow_zero a, opow_lt_opow_iff_right h1a]
+  exact pos_of_ne_zero h.2
+
+theorem Ordinal.exists_omega0_mul_add_natCast (o : Ordinal) :
+    ∃ a b, omega0 * a + Nat.cast b = o := by
+  obtain ⟨b, hb⟩ := lt_omega0.1 (mod_lt o omega0_ne_zero)
+  refine ⟨o / omega0, b, ?_⟩
+  rw [← hb, div_add_mod]
+
+theorem Ordinal.one_le_of_lt {a b : Ordinal} (hab : a < b) : 1 ≤ b := by
+  rw [← succ_zero, Order.succ_le_iff]
+  exact (zero_le a).trans_lt hab
+
 noncomputable section
 
 open Ordinal Polynomial
@@ -71,12 +91,62 @@ theorem coe_ringEquivPolynomial_symm_apply (p : ht.toIsField.toSubfield[X]) :
     (ht.ringEquivPolynomial.symm p : Nimber) = p.eval₂ ht.toIsField.toSubfield.subtype t :=
   ht.coe_algEquivPolynomial_symm_apply p
 
-theorem opow_omega0_mul_add_eq {x : Nimber} (hx : x < t) (n : ℕ) :
-    ∗(val t ^ (ω * (1 + val x) + n)) = ((t - x) ^ (n + 1))⁻¹ := by
+private theorem next_field_aux {x : Nimber} (hx : x < t) (n : ℕ) :
+    ∗(val t ^ (ω * (1 + val x) + n)) = ((t - x) ^ (n + 1))⁻¹ ∧
+      IsRing (∗(val t ^ (ω * (1 + val x)))) := by
   induction x using WellFoundedLT.induction generalizing n with | ind x ihx
   induction n with
   | zero =>
     rw [← inv_eq_iff_eq_inv]
+    have hr : IsRing (∗(val t ^ (ω * (1 + val x)))) := by
+      refine ht.toIsField.isRing_opow_of_mul_lt
+        (mul_ne_zero Ordinal.omega0_ne_zero
+          (add_pos_of_pos_of_nonneg zero_lt_one (_root_.zero_le (val x))).ne')
+        fun u v hu hv => ?_
+      obtain ⟨ua, ub, rfl⟩ := exists_omega0_mul_add_natCast u
+      obtain ⟨va, vb, rfl⟩ := exists_omega0_mul_add_natCast v
+      wlog! haa : va < ua generalizing ua ub va vb with ih
+      · obtain haa | rfl := haa.lt_or_eq
+        · rw [mul_comm]
+          exact ih va vb hv ua ub hu haa
+        obtain ha1 | h1a := lt_or_ge ua 1
+        · cases Ordinal.lt_one_iff_zero.1 ha1
+          simp only [mul_zero, zero_add]
+          refine lt_of_lt_of_le (ht.isRing_pow_omega0.mul_lt ?_ ?_) ?_
+          · rw [of.lt_iff_lt, opow_lt_opow_iff_right (by simp [ht.one_lt])]
+            exact nat_lt_omega0 _
+          · rw [of.lt_iff_lt, opow_lt_opow_iff_right (by simp [ht.one_lt])]
+            exact nat_lt_omega0 _
+          · rw [of.le_iff_le, opow_le_opow_iff_right (by simp [ht.one_lt])]
+            simp
+        · obtain ⟨ua, rfl⟩ := exists_add_of_le h1a
+          have hux : ∗ua < x := by simpa using lt_of_add_lt_of_nonneg_left hu
+          specialize ihx (∗ua) hux (hux.trans hx)
+          rw [val_of] at ihx
+          rw [(ihx ub).left, (ihx vb).left, ← mul_inv, ← pow_add, ← add_assoc, ← (ihx _).left,
+            of.lt_iff_lt, opow_lt_opow_iff_right (by simp [ht.one_lt])]
+          refine lt_of_lt_of_le (add_lt_add_right (nat_lt_omega0 _) _) ?_
+          rw [← mul_add_one, add_assoc]
+          exact mul_le_mul_right (add_le_add_right (Order.add_one_le_of_lt (of_lt_iff.1 hux)) 1) ω
+      obtain ⟨ua, rfl⟩ := exists_add_of_le (one_le_of_lt haa)
+      obtain ha1 | h1a := lt_or_ge va 1
+      · cases Ordinal.lt_one_iff_zero.1 ha1
+        clear hv haa ha1
+        rw [mul_zero, zero_add, opow_natCast, ← ht.pow_eq/-, ← one_mul (_ * t ^ vb)-/]
+        -- doesn't respect transparency, generalizes (1 : Ordinal) too
+        -- have hc : 1 < t := ht.one_lt
+        -- generalize (1 : Nimber) = c at hc ⊢
+        -- obtain ⟨c, hc⟩ : ∃ c : Nimber, c = 1 := ⟨1, rfl⟩
+        -- rw [← hc]
+        -- replace hc : c < t := hc ▸ ht.one_lt
+        induction vb with
+        | zero =>
+          rw [pow_zero, mul_one, of.lt_iff_lt, opow_lt_opow_iff_right (by simpa using ht.one_lt)]
+          exact hu
+        | succ vb ih =>
+          rw [pow_succ', ← mul_assoc]
+          sorry
+      · sorry
     have hy {y : Nimber} (hy : y < ∗(val t ^ (ω * (1 + val x)))) : (t - x) * y ≠ 1 := by
       -- `y` is a `t`-linear combination of [powers] of `t`
       -- which must be either powers of `t` or negative powers of `t - z` for `z < x`
