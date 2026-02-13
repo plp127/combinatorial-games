@@ -102,7 +102,7 @@ private theorem next_field_aux {x : Nimber} (hx : x < t) (n : ℕ) :
         letI : Algebra ht.isRing_pow_omega0.toSubring rx.toSubring :=
           (Subring.inclusion (subring_aux ht rx)).toAlgebra
         IsLocalization (Submonoid.comap ht.ringEquivPolynomial.toMonoidHom
-          (Submonoid.closure ((fun u => Polynomial.X - Polynomial.C u) '' Set.Iio ⟨x, hx⟩)))
+          (Submonoid.closure ((fun u => Polynomial.X - Polynomial.C u) '' Set.Iic ⟨x, hx⟩)))
           rx.toSubring := by
   induction x using WellFoundedLT.induction generalizing n with | ind x ihx
   induction n with
