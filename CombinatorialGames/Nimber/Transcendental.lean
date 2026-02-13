@@ -91,9 +91,19 @@ theorem coe_ringEquivPolynomial_symm_apply (p : ht.toIsField.toSubfield[X]) :
     (ht.ringEquivPolynomial.symm p : Nimber) = p.eval₂ ht.toIsField.toSubfield.subtype t :=
   ht.coe_algEquivPolynomial_symm_apply p
 
+private theorem subring_aux {x : Nimber} (hx : IsRing (∗(val t ^ (ω * (1 + val x))))) :
+    ht.isRing_pow_omega0.toSubring ≤ hx.toSubring :=
+  Set.Iio_subset_Iio (of.monotone (Ordinal.opow_le_opow_right
+    (val_zero.symm.trans_lt (val.strictMono ht.zero_lt)) (by simp)))
+
 private theorem next_field_aux {x : Nimber} (hx : x < t) (n : ℕ) :
     ∗(val t ^ (ω * (1 + val x) + n)) = ((t - x) ^ (n + 1))⁻¹ ∧
-      IsRing (∗(val t ^ (ω * (1 + val x)))) := by
+      ∃ rx : IsRing (∗(val t ^ (ω * (1 + val x)))),
+        letI : Algebra ht.isRing_pow_omega0.toSubring rx.toSubring :=
+          (Subring.inclusion (subring_aux ht rx)).toAlgebra
+        IsLocalization (Submonoid.comap ht.ringEquivPolynomial.toMonoidHom
+          (Submonoid.closure ((fun u => Polynomial.X - Polynomial.C u) '' Set.Iio ⟨x, hx⟩)))
+          rx.toSubring := by
   induction x using WellFoundedLT.induction generalizing n with | ind x ihx
   induction n with
   | zero =>
@@ -122,7 +132,7 @@ private theorem next_field_aux {x : Nimber} (hx : x < t) (n : ℕ) :
         · obtain ⟨ua, rfl⟩ := exists_add_of_le h1a
           have hux : ∗ua < x := by simpa using lt_of_add_lt_of_nonneg_left hu
           specialize ihx (∗ua) hux (hux.trans hx)
-          rw [val_of] at ihx
+          simp_rw [val_of] at ihx
           rw [(ihx ub).left, (ihx vb).left, ← mul_inv, ← pow_add, ← add_assoc, ← (ihx _).left,
             of.lt_iff_lt, opow_lt_opow_iff_right (by simp [ht.one_lt])]
           refine lt_of_lt_of_le (add_lt_add_right (nat_lt_omega0 _) _) ?_
